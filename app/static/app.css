@@ -1,0 +1,548 @@
+/* Palette follows Home Assistant's own light/dark conventions so the add-on
+   does not look foreign inside the sidebar. Ingress cannot tell us which
+   theme the user runs, so the choice comes from prefers-color-scheme. */
+:root {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface-2: #fafafa;
+  --border: #e0e0e0;
+  --text: #212121;
+  --text-dim: #727272;
+  /* Darker than the original light-blue-500 (#03a9f4): that reads fine as a
+     button fill under white text, but as text on white it measures 2.6:1 —
+     found via a real link ("Export CSV") that fell back to it once the base
+     `a` rule below started giving every bare link a colour instead of the
+     browser's unstyled default. */
+  --accent: #0288d1;
+  --accent-text: #ffffff;
+  --danger: #db4437;
+  /* Darker than a plain amber (#ffa600): that reads fine as a background
+     tint but is too light to use as text or a border on a near-white
+     surface — exactly how the counter pill and warning notices use it. */
+  --warn: #e65100;
+  --ok: #43a047;
+  --radius: 10px;
+  --shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111418;
+    --surface: #1c1f26;
+    --surface-2: #232730;
+    --border: #333a45;
+    --text: #e8eaed;
+    --text-dim: #9aa0a6;
+    --shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    /* The light-mode accent/danger/warn/ok tones are tuned for contrast
+       against white — reused as-is on a dark surface, --ok in particular
+       (#43a047) sits too close to the dark surface colours to read as text,
+       and --danger (#db4437) turns muddy. These are the brighter "300/400"
+       tone of the same Material colours, the standard adjustment for the
+       same hue to stay legible on a dark background instead of a light one. */
+    --accent: #29b6f6;
+    /* button.primary's text sits on --accent as a fill — the lighter dark-mode
+       accent above reads well as text on a dark surface, but white-on-it
+       (the light-mode pairing) drops below readable contrast; dark text
+       restores it. */
+    --accent-text: #0d1117;
+    --danger: #ef5350;
+    --warn: #ffca28;
+    --ok: #66bb6a;
+  }
+}
+
+* { box-sizing: border-box; }
+
+/* Without this, a plain <a> with no other rule matching it (e.g. "Export
+   CSV", which is not inside a <td> the way other links are) falls back to
+   the browser's own unstyled link colour — a fixed dark blue that never
+   adapts to this app's theme at all, and reads as barely legible dark
+   blue-on-black once the surface actually goes dark. More specific rules
+   further down (.topbar nav a, td a) still win over this by specificity. */
+a { color: var(--accent); }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ── chrome ─────────────────────────────────────────────────────────── */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+
+.brand-mark {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.topbar nav { display: flex; gap: 4px; }
+
+.topbar nav a {
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: var(--text-dim);
+  text-decoration: none;
+}
+
+.topbar nav a:hover { background: var(--surface-2); color: var(--text); }
+.topbar nav a.on { background: var(--accent); color: var(--accent-text); }
+
+main { padding: 20px; max-width: 100%; margin: 0 auto; }
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 20px 0;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--warn) 16%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--border));
+  font-size: 14px;
+}
+
+/* ── generic elements ───────────────────────────────────────────────── */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+/* Same reason as the tables' overflow-wrap: anywhere — the entity page's own
+   heading is often a long, unbroken entity_id (or a long friendly_name) with
+   no natural break point, which otherwise overflows its container's width
+   rather than wrapping onto a second line. */
+h1 { font-size: 22px; margin: 0 0 4px; overflow-wrap: anywhere; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+.sub { color: var(--text-dim); margin: 0 0 18px; }
+
+/* .link-button shares every rule with button: an <a> that triggers an action
+   (Export CSV is the one today) should look identical to the <button>
+   elements sitting next to it, not like a bare, unstyled text link — a real
+   shape/weight inconsistency in an otherwise all-button interface. Sharing
+   the selector, rather than duplicating the declarations, is what guarantees
+   the two can never drift apart. */
+button, .link-button {
+  display: inline-block;
+  font: inherit;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled), .link-button:hover { border-color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 500;
+}
+
+button.danger { color: var(--danger); border-color: var(--danger); }
+
+input[type="text"], input[type="number"], select, textarea {
+  font: inherit;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* A <select> ignores the padding/line-height combination that gives text
+   inputs their height (native platform chrome renders it a few pixels
+   shorter instead) — measured side-by-side on the entities page's filter
+   row, the type dropdown came out 38px against the search box's 40.5px.
+   textarea is excluded: its rows="2" needs to stay free to size itself. */
+input[type="text"], input[type="number"], select {
+  height: 40px;
+}
+
+label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 4px; }
+.field { margin-bottom: 14px; }
+
+/* The browser default checkbox size (~13px) reads as an afterthought next
+   to everything else in the app — every one of these four gates a real
+   destructive-or-not decision (acknowledging a backup, a counter's cascade,
+   hiding restored history), so it should look at least as deliberate as the
+   button beside it, not smaller than the text label next to it. */
+input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* Sized to match .banner exactly, not derived independently: .banner sits
+   directly in body with `margin: 12px 20px 0` and `padding: 10px 14px`, and
+   .card (this table's container) already lands at the same left/right
+   position as .banner — both are inset 20px from the viewport by main's own
+   padding. Two separate attempts to size this table by shrinking it inward
+   from .card's edge (first a calc() on the table, then extra padding plus a
+   further shrink) each produced a different, independently-reasoned number
+   instead of reusing one already agreed to be correct. Pulling .table-scroll
+   out by .card's own padding (-18px, matching .card's `padding: 18px`) and
+   back in by .banner's padding (14px) puts this table's content at the exact
+   same left/right position as .banner's text, using .banner's own numbers
+   rather than a new pair invented for the table.
+   `overflow-x: hidden`, not `auto`: a fixed-layout table's percentage column
+   widths do not always sum to exactly 100% once border-collapse enters the
+   arithmetic — measured directly, a real browser rendered the entity table
+   2px wider than this container at 700px with a long entity_id present, and
+   `auto` turned that stray 2px into a visible horizontal scrollbar. hidden
+   is safe because `overflow-wrap: anywhere` below already guarantees no
+   readable content ever needs that scroll to reach it. The mobile breakpoint
+   below overrides these margins/padding for its own full-bleed stacked-card
+   layout, where the question does not apply. */
+.table-scroll {
+  overflow-x: hidden;
+  margin-left: -18px;
+  margin-right: -18px;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
+tbody tr:hover { background: var(--surface-2); }
+td a { color: var(--accent); text-decoration: none; font-weight: 500; }
+
+/* Auto table layout sizes each column to its widest cell — one very long
+   entity_id (no spaces to wrap on) then stretches that whole column, and
+   every other row's cells shift to match it, however short they are. Fixed
+   layout takes column widths from the header row instead, so one long value
+   wraps inside its own cell rather than dragging the whole table's alignment
+   with it. Applies to every table with an entity_id in its first column —
+   both the entity browser and the corrections audit trail.
+   Sizing (the left/right gap around the table) lives entirely on
+   .table-scroll now, matched to .banner's own numbers — the table itself
+   just fills that already-correctly-sized box. */
+.stack-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.stack-table td:first-child,
+.stack-table td:first-child a {
+  overflow-wrap: anywhere;
+}
+
+.entity-table th:nth-child(1) { width: 34%; }
+.entity-table th:nth-child(2) { width: 14%; }
+.entity-table th:nth-child(3) { width: 20%; }
+.entity-table th:nth-child(4) { width: 18%; }
+.entity-table th:nth-child(5) { width: 14%; }
+
+.audit-table th:nth-child(1) { width: 20%; }
+.audit-table th:nth-child(2) { width: 16%; }
+.audit-table th:nth-child(3) { width: 12%; }
+.audit-table th:nth-child(4) { width: 12%; }
+.audit-table th:nth-child(5) { width: 18%; }
+.audit-table th:nth-child(6) { width: 12%; }
+/* A percentage here shrinks along with the table, but the Restore button
+   inside it does not — measured directly, the button rendered 82.5px wide
+   while a 6% column gave it only 67.8px, clipping roughly 15px of it against
+   `.table-scroll`'s `overflow-x: hidden`. A fixed pixel width holds regardless
+   of the table's own width, which a percentage of it structurally cannot. */
+.audit-table th:nth-child(7) { width: 100px; }
+
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--text); }
+th.sortable::after { content: ''; display: inline-block; width: 10px; }
+th.sortable.sort-asc::after { content: '▲'; font-size: 9px; }
+th.sortable.sort-desc::after { content: '▼'; font-size: 9px; }
+
+.pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.pill.measurement { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--border)); }
+.pill.counter { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); }
+.pill.corrected { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+
+.muted { color: var(--text-dim); }
+.mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px; overflow-wrap: anywhere; }
+.row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+/* Without this, the browser's native `hidden` attribute is silently beaten
+   by the flex rule above (an author rule always wins over the UA default,
+   regardless of matching specificity) — a `.row hidden` element renders
+   anyway. Found on p-cascade-ack-row: a non-counter entity showed the "I
+   understand this rewrites every later total" checkbox permanently, for
+   every entity, whether or not there was ever a cascade to acknowledge. */
+.row[hidden] { display: none; }
+.spread {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  /* Measured on the entities page: with no margin here, the filter row's
+     bottom edge and the table below it landed on the exact same pixel —
+     the controls sat flush against the table with no separation at all. */
+  margin-bottom: 16px;
+}
+
+.notice {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.notice.warn { background: color-mix(in srgb, var(--warn) 14%, var(--surface)); }
+.notice.error { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); }
+.notice.ok { background: color-mix(in srgb, var(--ok) 14%, var(--surface)); }
+
+/* ── graph and correction panel ─────────────────────────────────────── */
+
+.chart-wrap { position: relative; height: 380px; }
+
+.chart-wrap.bulk-mode canvas { cursor: crosshair; }
+
+.selection-overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-left: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
+  pointer-events: none;
+}
+
+.selection-overlay[hidden] { display: none; }
+
+/* Deliberately opaque enough to obscure the stale chart underneath, not just
+   a small text label off to the side — a period change (prev/next, or the
+   range dropdown) must never look like nothing happened while the new data
+   is still in flight. */
+.chart-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  font-weight: 500;
+  color: var(--text);
+}
+
+.chart-loading[hidden] { display: none; }
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: hc-spin 0.7s linear infinite;
+}
+
+@keyframes hc-spin {
+  to { transform: rotate(360deg); }
+}
+
+.panel {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: min(420px, 100%);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: -4px 0 18px rgba(0, 0, 0, 0.18);
+  padding: 20px;
+  overflow-y: auto;
+  z-index: 20;
+}
+
+.panel[hidden] { display: none; }
+
+.readout {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.readout[hidden] { display: none; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  padding: 11px 18px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  z-index: 40;
+  max-width: 90vw;
+}
+
+.toast[hidden] { display: none; }
+.toast.error { border-color: var(--danger); }
+.toast.ok { border-color: var(--ok); }
+
+.steps { counter-reset: step; }
+.step { display: flex; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.step:last-child { border-bottom: none; }
+
+.step-num {
+  flex: none;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+  display: grid; place-items: center;
+  font-size: 13px; font-weight: 600;
+}
+
+pre.snippet {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  margin: 0;
+  /* The real Ingress url: line is a long random token, easily wider than a
+     phone screen — wrapping it keeps the whole snippet visible at once
+     rather than requiring horizontal scroll to read one line. Copying still
+     yields the original unbroken string; this wrapping is purely visual. */
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ── narrow screens ──────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  body { font-size: 13px; }
+  h1 { font-size: 18px; }
+  main { padding: 8px; }
+  .card { padding: 12px; border-radius: 0; }
+
+  /* Full-bleed: the table reaches the screen edges even though the card
+     around it (title, search box) keeps its own padding — a negative margin
+     equal to the card's padding pulls .table-scroll out to meet it. Each
+     stacked "card" row below then gets its own inset margin, so the result
+     is a list of cards with breathing room between them and the screen
+     edge, inside a container that itself wastes no width. */
+  .table-scroll {
+    margin-left: -12px;
+    margin-right: -12px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* A real <table> stops working below this width: cramming 4-7 columns
+     into ~350px of usable space left every row either truncated or requiring
+     horizontal scroll to read, however small the font got. Each row becomes
+     its own card instead — the header row (whose job was labelling columns
+     side by side) is hidden, and every cell instead labels itself via
+     data-label, read by ::before below. */
+  .stack-table thead { display: none; }
+
+  .stack-table,
+  .stack-table tbody,
+  .stack-table td {
+    display: block;
+    width: 100%;
+  }
+
+  /* No `width: 100%` here, unlike its siblings above: this row also carries
+     its own `margin: 0 12px 8px`, and margin is never included in a width —
+     it's added on top. `width: 100%` plus that margin computed to 24px
+     wider than the table itself, overflowing past the table's own right
+     edge (and, on a narrow phone, past the viewport) by a few pixels — found
+     by inspecting a real iPhone in Safari's dev tools, not visible on this
+     project's own desktop-sized browser tests. `width: auto` is what a
+     block-level element already does by default: fill the available space
+     *after* subtracting its own margins, which is what every other bare
+     `display: block` element in this ruleset gets for free by never having
+     width set at all. */
+  .stack-table tr {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 0 12px 8px;
+    padding: 8px 10px;
+  }
+
+  .stack-table tr:last-child { margin-bottom: 0; }
+
+  .stack-table td {
+    border-bottom: none;
+    padding: 4px 0;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .stack-table td[data-label]::before {
+    content: attr(data-label);
+    flex: none;
+    font-weight: 600;
+    color: var(--text-dim);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  /* The first labelled cell in each row (the entity, in both tables this
+     applies to) reads as the card's own title, not one more label/value line
+     — a name is what actually identifies which card you are looking at. */
+  .stack-table td[data-label]:first-child {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    padding-bottom: 6px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stack-table td[data-label]:first-child::before { content: none; }
+
+  /* Lowest priority for finding and jumping into an entity, which is what
+     the entities page is for on a phone — its own detail page already shows
+     recorded times in context. Not removed from the DOM: still there for
+     anyone who widens the browser or rotates to landscape. */
+  .entity-table .col-updated { display: none; }
+}

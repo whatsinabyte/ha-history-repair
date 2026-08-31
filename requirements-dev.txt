@@ -1,0 +1,30 @@
+# Runtime dependencies
+-r app/requirements.txt
+
+# Test tooling
+-r requirements-test.txt
+
+# Static analysis (development only — never installed in the Docker image)
+ruff>=0.16.3
+mypy>=2.3.1
+vulture>=2.16
+bandit>=1.9.4
+
+# Integration tests against a real MariaDB are driven by the HR_TEST_DSN
+# environment variable rather than by a container library: no extra dependency
+# is needed, and the suite skips those tests cleanly when the variable is
+# unset. See tests/test_mariadb_integration.py.
+
+# Browser tests for the frontend (development only — never in the Docker image).
+# Install its browser with: .venv-check/bin/playwright install chromium
+pytest-playwright>=0.5.2
+
+# WebSocket client for the Home Assistant development instance and, in
+# Phase 2, the recorder/import_statistics command itself.
+websocket-client>=1.9.0
+
+# The integration suite talks to a real PostgreSQL (dev/postgres.sh).
+# [binary] here but not in app/requirements.txt: development is on glibc
+# macOS/Linux where the wheel installs cleanly, while the Alpine image
+# needs the pure-Python build against apk's libpq instead.
+psycopg[binary]>=3.2

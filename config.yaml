@@ -1,0 +1,121 @@
+name: "History Repair"
+version: "0.1.0"
+slug: "history_repair"
+# Prebuilt multi-arch images are not published while the add-on is still under
+# active local development — Supervisor building from source on-device via the
+# Dockerfile gives a faster iteration loop than push-then-pull from a registry.
+# image: "ghcr.io/whatsinabyte/{arch}-addon-history_repair"
+description: >-
+  Visually inspect and correct outlier values in the Home Assistant recorder
+  history, with a full audit trail and one-click restore. Works with the
+  default SQLite recorder database, or an external MariaDB or PostgreSQL.
+  Because SQLite has no way to mount a single file, this add-on requires
+  read-write access to your whole Home Assistant configuration directory,
+  not just its own.
+url: "https://github.com/whatsinabyte/ha-history-repair"
+stage: experimental
+arch:
+  - aarch64
+  - amd64
+startup: application
+boot: auto
+init: false
+apparmor: true
+
+# Grants the SUPERVISOR_TOKEN access to Home Assistant Core's own API
+# (ws://supervisor/core/websocket), which is what refresh_statistics_cache in
+# hr_corrections.py calls after a correction to update Home Assistant's
+# in-memory statistics without requiring a restart. Without this, Supervisor
+# still provides a SUPERVISOR_TOKEN (every add-on gets one for its own
+# management API), but Home Assistant Core rejects it — the code's own
+# _authenticate() already anticipated this exact failure, but the grant was
+# never actually added, so the refresh has never been able to succeed on a
+# real installation.
+homeassistant_api: true
+
+# Requests read access to whatever add-on is currently providing the "mysql"
+# and "mqtt" services — normally the official MariaDB and Mosquitto add-ons.
+# hr_discovery.py queries Supervisor's own API for each at startup:
+#   - mysql, when found, replaces db_host/db_port/db_user/db_password below,
+#     so a user running the official MariaDB add-on does not have to copy
+#     those values in by hand.
+#   - mqtt, when found, is used by hr_mqtt.py to publish a "needs review"
+#     entity reflecting find_orphaned_corrections() — visible on a dashboard
+#     or usable in an automation without opening this add-on's own UI.
+# Both are optional ("want", not "need"): this add-on works identically with
+# neither service present. No extra grant is needed beyond this declaration
+# — Supervisor's own /services/* API endpoints are deliberately exempt from
+# the broader hassio_api permission most of its other endpoints require.
+services:
+  - mysql:want
+  - mqtt:want
+
+# Supervisor polls this and restarts the add-on if it stops responding —
+# this add-on's own /api/health endpoint already exists for exactly this.
+watchdog: "http://[HOST]:[PORT:8099]/api/health"
+
+# Served through Supervisor Ingress: the UI inherits Home Assistant's own
+# authentication and appears in the sidebar. No port is published on the LAN,
+# because anything that can reach this add-on can rewrite the recorder
+# database. Ingress also supplies the authenticated username, which is
+# recorded as the author of every correction.
+ingress: true
+ingress_port: 8099
+panel_icon: "mdi:wrench-clock"
+panel_title: "History Repair"
+panel_admin: true
+
+# Onboarding state (the backup acknowledgement) is persisted here so it
+# survives an add-on restart; app_config maps a directory belonging to this
+# add-on alone. Its default container path is /config — not /app_config, and
+# not the legacy addon_config type's old /addon_config — freed for exactly
+# this purpose when Supervisor renamed the old bare "config" map type to
+# homeassistant_config. See CLAUDE.md's "Known departures" for how this was
+# found: a Supervisor deprecation warning for addon_config, which led to
+# discovering the add-on's state was silently failing to persist because its
+# assumed /addon_config path had not actually been the default for some time.
+#
+# homeassistant_config is the wider grant, requested unconditionally because
+# Supervisor's map: list is fixed at install time and cannot depend on the
+# db_type option chosen below. Around 80% of installs run the default SQLite
+# recorder, and SQLite is a file, not a server — there is no way to mount just
+# home-assistant_v2.db without mounting the directory it lives in. That
+# directory holds everything: automations, secrets.yaml, every integration's
+# config. MariaDB/PostgreSQL-only installs get no benefit from this grant, but
+# there is no config.yaml mechanism to withhold it selectively; see DOCS.md
+# for the full reasoning.
+map:
+  - app_config:rw
+  - homeassistant_config:rw
+
+options:
+  db_type: "sqlite"
+  db_path: "/homeassistant/home-assistant_v2.db"
+  db_host: "core-mariadb"
+  db_port: 0
+  db_name: "homeassistant"
+  db_user: "homeassistant"
+  db_password: ""
+  log_level: "info"
+  time_format: "24"
+
+schema:
+  # db_type selects the recorder backend — these are the three Home
+  # Assistant's own recorder supports. SQLite is the default because it is
+  # what most Home Assistant installs actually use; db_host/db_port/etc are
+  # only read for the two server backends.
+  db_type: list(sqlite|mariadb|postgres)
+  db_path: str
+  # Recorder database connection. Defaults match the official MariaDB add-on.
+  db_host: "match(^[a-zA-Z0-9]([a-zA-Z0-9\\-\\.]{0,61}[a-zA-Z0-9])?$)"
+  # 0 means "the standard port for the selected db_type" — 3306 for
+  # mariadb, 5432 for postgres — so a PostgreSQL user is not silently
+  # pointed at MySQL's port by a default that predates PostgreSQL support.
+  db_port: int(0,65535)
+  db_name: str
+  db_user: str
+  db_password: password
+  log_level: list(debug|info|warning|error)
+  # There is no API to read a browsing user's personal date/time preference
+  # from Home Assistant (see hr_config.py), so this is set explicitly.
+  time_format: list(12|24)

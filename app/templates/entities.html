@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Entities · History Repair{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="spread">
+    <div>
+      <h1>Entities</h1>
+      <p class="sub" id="entity-count">Loading…</p>
+    </div>
+    <div class="row" style="justify-content: flex-end;">
+      <select id="type-filter" style="width: auto;">
+        <option value="">All types</option>
+        <option value="measurement">Measurement</option>
+        <option value="counter">Counter</option>
+        <option value="unknown">Unknown</option>
+      </select>
+      <div style="width: min(320px, 45vw);">
+        <input type="text" id="search" placeholder="Filter by entity id…" autocomplete="off">
+      </div>
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table class="entity-table stack-table">
+      <thead>
+        <tr>
+          <th class="sortable" data-sort="entity_id" title="The entity_id Home Assistant uses internally, e.g. sensor.living_room_temperature.">Entity</th>
+          <th title="Measurement (a Mean/Min/Max statistic, like a temperature or a calculated ratio) and Counter (a Sum statistic — an energy, water, or gas total) sensors can both be corrected. Unknown means Home Assistant recorded no statistics of any kind for it — states can still be corrected, but there is nothing to keep in sync.">Type</th>
+          <th title="The most recent value the recorder has stored for this entity.">Last state value</th>
+          <th class="col-updated sortable" data-sort="last_updated" title="When that last value was recorded.">Last updated</th>
+          <th class="sortable" data-sort="corrections" title="How many active (not restored) corrections exist for this entity.">Corrections</th>
+        </tr>
+      </thead>
+      <tbody id="entity-rows">
+        <tr><td colspan="5" class="muted">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="row" style="margin-top: 14px;">
+    <button type="button" id="prev" disabled>Previous</button>
+    <button type="button" id="next" disabled>Next</button>
+    <span class="muted" id="page-info"></span>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='entities.js') }}"></script>
+{% endblock %}

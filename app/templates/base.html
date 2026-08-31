@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}History Repair{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <!-- No add-on icon file exists to serve as a favicon (only an MDI icon
+       name for the Supervisor sidebar, in config.yaml) — this empty data URI
+       is the standard way to tell a browser there is none, so it stops
+       automatically requesting /favicon.ico and logging the resulting 404. -->
+  <link rel="icon" href="data:,">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <span>History Repair</span>
+    </div>
+    {% if active != 'onboarding' %}
+    <nav>
+      <a href="{{ url_for('index') }}" class="{{ 'on' if active == 'entities' }}">Entities</a>
+      <a href="{{ url_for('audit_page') }}" class="{{ 'on' if active == 'audit' }}">Corrections</a>
+    </nav>
+    {% endif %}
+  </header>
+
+  {% if active != 'onboarding' %}
+  <div class="banner">
+    <span>Corrections rewrite your recorder database. Make sure you have a recent Home Assistant backup.</span>
+  </div>
+  {% endif %}
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script>
+    // Ingress serves the add-on under a token-prefixed path, so every fetch
+    // must be relative to the base Flask generated for this request.
+    window.HR_BASE = {{ url_for('index')|tojson }};
+    window.HR_TIME_FORMAT = {{ time_format|tojson }};
+  </script>
+  <script src="{{ url_for('static', filename='common.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

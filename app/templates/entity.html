@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}{{ entity.friendly_name or entity.entity_id }} · History Repair{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="spread">
+    <div>
+      <h1>{{ entity.friendly_name or entity.entity_id }}</h1>
+      <p class="sub mono">{{ entity.entity_id }}</p>
+    </div>
+    <div class="row">
+      <span class="pill {{ entity.sensor_type }}">{{ entity.sensor_type }}</span>
+      <a href="{{ url_for('index') }}" id="back-to-entities"><button type="button">Back to entities</button></a>
+    </div>
+  </div>
+
+  {% if is_counter %}
+  <div class="notice warn">
+    <strong>This is a counter.</strong> It has a Sum statistic in Home Assistant
+    (the same "Sum" column shown on Developer Tools → Statistics) — a running
+    total, so correcting one reading also rewrites every total that follows it.
+    You will be shown how many rows that is before anything is saved.
+  </div>
+  {% endif %}
+
+  {% if entity.sensor_type == "unknown" %}
+  <div class="notice">
+    <strong>States-only correction.</strong> Home Assistant recorded no
+    statistics for this entity, so there is nothing to keep in sync — a
+    correction here only changes the state value, with no 5-minute or hourly
+    buckets to rebuild.
+  </div>
+  {% elif correctable %}
+  <div class="notice">
+    <strong>Statistics are corrected too.</strong> A correction rebuilds the
+    5-minute and hourly statistics buckets containing the reading, in the same
+    transaction as the reading itself, so statistics graph cards agree with the
+    history graph. Home Assistant also keeps statistics in memory, so
+    <strong>restart Home Assistant</strong> if a statistics card or the energy
+    dashboard still shows the old statistics value.
+  </div>
+  {% endif %}
+
+  <div class="row" style="margin-bottom: 14px;">
+    <label style="margin: 0;">Range</label>
+    <select id="range" style="width: auto;">
+      <option value="86400">Last 24 hours</option>
+      <option value="604800" selected>Last 7 days</option>
+      <option value="2592000">Last 30 days</option>
+    </select>
+    <button type="button" id="range-prev" title="Earlier">&larr;</button>
+    <button type="button" id="range-next" title="Later">&rarr;</button>
+    <span class="muted mono" id="range-window"></span>
+    <label style="margin: 0;" title="Lower finds more candidates; higher finds only the most extreme.">Sensitivity</label>
+    <input type="range" id="sensitivity" min="1" max="8" step="0.5" value="3" style="width: 120px;">
+    <span class="muted mono" id="sensitivity-value">3.0</span>
+    <span class="muted" id="point-count"></span>
+    {% if correctable %}
+    <button type="button" id="bulk-toggle">Correct a range</button>
+    <span class="muted grow" id="chart-hint" style="text-align: right;">Click a point on the graph to correct it.</span>
+    {% endif %}
+  </div>
+
+  <div class="notice warn" id="truncation-notice" hidden></div>
+  <div class="notice" id="backfill-notice" hidden></div>
+  <div class="notice" id="empty-notice" hidden>
+    No readings in this range. The sensor may not have reported recently, or
+    the recorder may have purged data this old. Try a longer range.
+  </div>
+
+  <div class="chart-wrap" id="chart-wrap">
+    <canvas id="chart"></canvas>
+    <div class="selection-overlay" id="selection-overlay" hidden></div>
+    <div class="chart-loading" id="chart-loading" hidden>
+      <div class="spinner"></div>
+      <span>Loading…</span>
+    </div>
+  </div>
+</div>
+
+<aside class="panel" id="panel" hidden>
+  <div class="spread">
+    <h2 style="margin: 0;">Correct this state value</h2>
+    <button type="button" id="panel-close">Close</button>
+  </div>
+
+  <div class="readout"><span>Recorded at</span><span id="p-time" class="mono"></span></div>
+  <div class="readout"><span>Current state value</span><span id="p-value" class="mono"></span></div>
+  <div class="readout" id="p-orig-row" hidden>
+    <span>Original state value</span><span id="p-orig" class="mono"></span>
+  </div>
+
+  <div id="p-corrected" hidden>
+    <div class="notice ok" style="margin-top: 14px;">
+      This point has already been corrected. Restore it to put the original state
+      value back, then correct it again if you need a different state value.
+    </div>
+    <button type="button" class="danger" id="p-restore">Restore original state value</button>
+  </div>
+
+  <form id="p-form" style="margin-top: 16px;">
+    <div class="field">
+      <label for="p-new">Corrected state value</label>
+      <input type="text" id="p-new" inputmode="decimal" autocomplete="off" required>
+    </div>
+    <div class="field">
+      <label for="p-quality">Why was it wrong?</label>
+      <select id="p-quality">
+        <option value="spike">Spike — an implausible jump</option>
+        <option value="bad_comm">Bad communication — network or integration failure</option>
+        <option value="out_of_range">Out of range — physically impossible</option>
+        <option value="frozen">Frozen — stuck at one state value</option>
+        <option value="uncertain" selected>Uncertain</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="p-note">Note (optional)</label>
+      <textarea id="p-note" rows="2" maxlength="255"></textarea>
+    </div>
+    <div class="notice warn" id="p-cascade-warning" hidden></div>
+    <label class="row" id="p-cascade-ack-row" hidden style="cursor: pointer;">
+      <input type="checkbox" id="p-cascade-ack">
+      <span>I understand this rewrites every later total.</span>
+    </label>
+    <div class="notice" id="p-current-warning" hidden>
+      This is the entity's most recent state value. Home Assistant keeps the
+      current state in memory, so the entity card will keep showing the old
+      state value until the next report from the device. History graphs
+      update immediately.
+    </div>
+    <!-- Starts disabled so a JS failure/race fails safe (can't save) rather
+         than unsafe (saves without the cascade being acknowledged) — select()
+         in entity.js always sets the correct state explicitly once it runs,
+         including re-enabling this for a non-counter point. -->
+    <button type="submit" class="primary" id="p-save" disabled>Save correction</button>
+  </form>
+</aside>
+
+<aside class="panel" id="bulk-panel" hidden>
+  <div class="spread">
+    <h2 style="margin: 0;">Correct a range</h2>
+    <button type="button" id="bulk-panel-close">Close</button>
+  </div>
+
+  <div class="readout"><span>From</span><span id="bulk-start" class="mono"></span></div>
+  <div class="readout"><span>To</span><span id="bulk-end" class="mono"></span></div>
+  <div class="readout"><span>Rows in range</span><span id="bulk-total" class="mono"></span></div>
+  <div class="readout" id="bulk-skip-row" hidden>
+    <span>Already corrected (skipped)</span><span id="bulk-skip" class="mono"></span>
+  </div>
+
+  <form id="bulk-form" style="margin-top: 16px;">
+    <div class="field">
+      <label for="bulk-strategy">How should the range be filled?</label>
+      <select id="bulk-strategy">
+        <option value="interpolate">Interpolate — a smooth line between the readings just outside the range</option>
+        <option value="constant">One value — replace every reading with the same state value</option>
+      </select>
+    </div>
+    <div class="field" id="bulk-value-field" hidden>
+      <label for="bulk-value">State value</label>
+      <input type="text" id="bulk-value" inputmode="decimal" autocomplete="off">
+    </div>
+    <div class="notice" id="bulk-interpolate-notice" hidden>
+      Interpolation is not possible for this range — it needs a numeric reading
+      on both sides of it. Choose a range with data before and after it, or use
+      a single state value instead.
+    </div>
+    <div class="field">
+      <label for="bulk-quality">Why was it wrong?</label>
+      <select id="bulk-quality">
+        <option value="bad_comm" selected>Bad communication — network or integration failure</option>
+        <option value="spike">Spike — an implausible jump</option>
+        <option value="out_of_range">Out of range — physically impossible</option>
+        <option value="frozen">Frozen — stuck at one state value</option>
+        <option value="uncertain">Uncertain</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="bulk-note">Note (optional)</label>
+      <textarea id="bulk-note" rows="2" maxlength="255"></textarea>
+    </div>
+    <div class="notice warn" id="bulk-cascade-warning" hidden></div>
+    <label class="row" id="bulk-cascade-ack-row" hidden style="cursor: pointer;">
+      <input type="checkbox" id="bulk-cascade-ack">
+      <span>I understand this rewrites every later total.</span>
+    </label>
+    <!-- Same fail-safe reasoning as p-save above. -->
+    <button type="submit" class="primary" id="bulk-save" disabled>Correct this range</button>
+  </form>
+</aside>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/luxon.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/chartjs-adapter-luxon.min.js') }}"></script>
+<script>
+  window.HR_ENTITY = {{ entity|tojson }};
+  window.HR_CORRECTABLE = {{ correctable|tojson }};
+  window.HR_IS_COUNTER = {{ is_counter|tojson }};
+</script>
+<script src="{{ url_for('static', filename='entity.js') }}"></script>
+{% endblock %}

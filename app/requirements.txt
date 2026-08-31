@@ -1,0 +1,10 @@
+Flask>=3.0.3
+PyMySQL>=1.1.1
+gunicorn>=22.0.0
+websocket-client>=1.9.0
+paho-mqtt>=2.1.0
+# Pure-Python psycopg deliberately, without the [binary] or [c] extras:
+# their wheels are manylinux and this image is Alpine (musl), so the only
+# combination that installs without a compiler is plain psycopg against
+# the libpq the Dockerfile apk-installs.
+psycopg>=3.2

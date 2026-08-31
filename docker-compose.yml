@@ -1,0 +1,85 @@
+# Packaging for Container-install Home Assistant users (plain Docker /
+# docker-compose), not HAOS. If you use Home Assistant OS or Supervised,
+# install this as an app instead — see README.md — you get Supervisor
+# Ingress there, which supplies authentication this file cannot.
+#
+# ── Security — read before exposing anything ──────────────────────────────
+# The app's own auth model is Supervisor Ingress: Home Assistant's login
+# gates every request, and Supervisor supplies the username that ends up in
+# the audit trail. None of that exists here. The port below is bound to
+# 127.0.0.1 only, on purpose — do not change that to "8099:8099" (all
+# interfaces) unless you put a reverse proxy with its own authentication in
+# front of it first. An unauthenticated network port here can rewrite your
+# recorder database. See DOCS.md's Security section for the full reasoning
+# (the same one that keeps the app off a published port entirely).
+#
+# ── Usage ───────────────────────────────────────────────────────────────
+#   1. Copy this file next to your existing Home Assistant docker-compose
+#      stack, or add this service to it directly.
+#   2. Set homeassistant_network below to the network your Home Assistant
+#      and database containers already share.
+#   3. Uncomment exactly one of the MariaDB / PostgreSQL / SQLite
+#      environment (and, for SQLite, volume) blocks below.
+#   4. docker compose up -d, then browse to http://127.0.0.1:8099/
+#
+# Corrections made this way are attributed to "unknown": the created_by
+# column normally comes from Supervisor Ingress's authenticated username,
+# which has no equivalent outside Supervisor.
+
+services:
+  history-repair:
+    build:
+      context: .
+      args:
+        BUILD_ARCH: amd64 # or aarch64
+    container_name: history-repair
+    restart: unless-stopped
+    working_dir: /app
+    # Overrides the app's own CMD (/run.sh), which expects a Supervisor-
+    # written /data/options.json that does not exist here. hr_config.py reads
+    # these HR_* environment variables directly either way — run.sh is only a
+    # translation shim between Supervisor's options.json and them.
+    command: ["python3", "history_repair.py"]
+    ports:
+      - "127.0.0.1:8099:8099"
+    environment:
+      HR_PORT: "8099"
+      HR_LOG_LEVEL: "info"
+      HR_STATE_DIR: "/config"
+
+      # -- MariaDB mode --
+      HR_DB_TYPE: "mariadb"
+      HR_DB_HOST: "mariadb" # the service name of your MariaDB container
+      HR_DB_PORT: "3306"
+      HR_DB_NAME: "homeassistant"
+      HR_DB_USER: "homeassistant"
+      HR_DB_PASSWORD: "changeme"
+
+      # -- PostgreSQL mode (comment out the MariaDB block above instead) --
+      # HR_DB_TYPE: "postgres"
+      # HR_DB_HOST: "postgres" # the service name of your PostgreSQL container
+      # HR_DB_PORT: "5432"
+      # HR_DB_NAME: "homeassistant"
+      # HR_DB_USER: "homeassistant"
+      # HR_DB_PASSWORD: "changeme"
+
+      # -- SQLite mode (comment out the MariaDB block above instead) --
+      # HR_DB_TYPE: "sqlite"
+      # HR_DB_PATH: "/homeassistant/home-assistant_v2.db"
+    volumes:
+      # Onboarding state — this app's own small JSON file, equivalent to
+      # Supervisor's app_config mount.
+      - ./history-repair-data:/config
+      # SQLite mode only: your Home Assistant config directory, wherever
+      # home-assistant_v2.db actually lives. Uncomment and point it there.
+      # - /path/to/your/homeassistant/config:/homeassistant
+    networks:
+      - homeassistant_network
+
+networks:
+  homeassistant_network:
+    # Set this to the network name your existing Home Assistant / MariaDB
+    # stack already uses (`docker network ls`), so this container can reach
+    # them by service name.
+    external: true
+    name: homeassistant_network

@@ -1,0 +1,54 @@
+configuration:
+  db_type:
+    name: Recorder database type
+    description: >-
+      Which recorder database to connect to — these are the three Home
+      Assistant's own recorder supports. "sqlite" is the default database used
+      by most installations; "mariadb" is for an external MariaDB/MySQL
+      server; "postgres" is for an external PostgreSQL server. db_path is read
+      only in sqlite mode; db_host, db_port, db_name, db_user, and db_password
+      are read only in mariadb and postgres modes.
+  db_path:
+    name: SQLite database path
+    description: >-
+      Location of home-assistant_v2.db. Only used when db_type is "sqlite".
+      The default is correct for a standard Home Assistant installation.
+  db_host:
+    name: Database hostname
+    description: >-
+      Hostname or IP address of the MariaDB or PostgreSQL server holding your
+      recorder database. The default "core-mariadb" is correct when you use
+      the official MariaDB add-on.
+  db_port:
+    name: Database port
+    description: >-
+      TCP port of the database server. Leave this at 0 to use whichever port
+      is standard for the database type you chose — 3306 for MariaDB, 5432 for
+      PostgreSQL — and set it only if your server listens somewhere else.
+  db_name:
+    name: Database name
+    description: >-
+      Name of the database Home Assistant's recorder writes to. This is
+      "homeassistant" unless you changed it in your recorder configuration.
+  db_user:
+    name: Database username
+    description: >-
+      Database user the add-on connects as. It needs SELECT and UPDATE on the
+      recorder database, plus CREATE for the one audit table this add-on adds.
+      The official MariaDB add-on grants all of these by default.
+  db_password:
+    name: Database password
+    description: >-
+      Password for that user. Stored encrypted by the Home Assistant
+      Supervisor and never shown in the add-on's own interface.
+  log_level:
+    name: Log level
+    description: >-
+      How much detail the add-on writes to its log. Raise this to "debug" when
+      reporting a problem; leave it at "info" otherwise.
+  time_format:
+    name: Time format
+    description: >-
+      "24" or "12" hour clock for every timestamp this add-on shows. There is
+      no way for an add-on to read your personal Home Assistant profile's
+      date/time preference, so this is set explicitly instead of detected.

@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Type checking
+.mypy_cache/
+.ruff_cache/
+
+# Test infrastructure
+.hypothesis/
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Mutation testing (run-mutmut.sh) — sandboxes, results, and the pyproject.toml
+# it generates wholesale per module run
+mutants/
+mutants-*/
+mutmut-results/
+.mutmut-cache
+.mutmut_current_phase
+/pyproject.toml
+
+# Virtual environments
+.venv/
+.venv-check/
+
+# Local secrets and runtime data — never commit these
+data/
+/data/
+.env
+
+# Local copies of a real recorder database (schema dumps, sample rows).
+# These contain a household's sensor history — developer-local only.
+/reference-dumps/
+
+# Claude Code project config — kept local-only
+.claude/
+
+# macOS
+.DS_Store
+.smb*
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build outputs
+*.egg-info/
+dist/
+build/
+
+# Disposable development database — never committed
+.devdb/
+.venv-ha-schema/

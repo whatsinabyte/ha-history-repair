@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Corrections · History Repair{% endblock %}
+
+{% block content %}
+<div id="orphaned-banner"></div>
+
+<div class="card">
+  <div class="spread">
+    <div>
+      <h1>Corrections</h1>
+      <p class="sub">Every change this app has made, and what it replaced.</p>
+    </div>
+    <div class="row">
+      <label class="row" style="cursor: pointer; margin: 0;">
+        <input type="checkbox" id="hide-restored">
+        <span>Hide restored</span>
+      </label>
+      <a href="#" id="export-csv" class="link-button" download>Export CSV</a>
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table class="audit-table stack-table">
+      <thead>
+        <tr>
+          <th title="The entity this correction was made on.">Entity</th>
+          <th title="When the original (now corrected) reading was recorded.">Recorded at</th>
+          <th title="The value that was recorded before this correction.">Original</th>
+          <th title="The value this correction replaced it with.">Corrected to</th>
+          <th title="The quality code chosen when the correction was made, plus any note.">Reason</th>
+          <th title="The Home Assistant user who made this correction, from Supervisor Ingress.">By</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="7" class="muted">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='audit.js') }}"></script>
+{% endblock %}

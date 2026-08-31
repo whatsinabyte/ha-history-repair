@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Set up History Repair{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1>Welcome to History Repair</h1>
+  <p class="sub">Three short steps before you correct anything.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="grow">
+        <h2>Back up Home Assistant</h2>
+        <p class="muted">
+          This app writes directly to your recorder database. Every change is
+          recorded and reversible from inside the app, but a full backup is
+          your safety net if something goes wrong at a level this tool cannot
+          undo. Create one from <strong>Settings → System → Backups</strong>
+          before continuing.
+        </p>
+        <p class="muted">
+          It also has read-write access to your entire Home Assistant
+          configuration directory, not only its own. This is required to reach
+          <code>home-assistant_v2.db</code> when using the default SQLite
+          recorder — SQLite is a single file, and there is no way to grant
+          access to just that one file. If you use an external MariaDB or
+          PostgreSQL instead, this app never uses that wider access, but
+          Supervisor still requires it be granted for every mode to work.
+        </p>
+        <label class="row" style="cursor: pointer;">
+          <input type="checkbox" id="backup-ack">
+          <span>I have created a backup of my Home Assistant instance.</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="grow">
+        <h2>Check the database connection</h2>
+        <p class="muted">
+          Confirms the app can reach your recorder database, that its schema
+          is one this app understands, and that it may write.
+        </p>
+        <div class="row">
+          <button type="button" id="test-connection">Test connection</button>
+          <span id="connection-status" class="muted">Not tested yet.</span>
+        </div>
+        <div id="health-detail"></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="grow">
+        <h2>Find the app later</h2>
+        <p class="muted">
+          History Repair appears in your Home Assistant sidebar, so there is
+          nothing to add to a dashboard. If you would rather embed it in one, add
+          a webpage card with this configuration:
+        </p>
+        <pre class="snippet" id="card-yaml">type: iframe
+url: {{ url_for('index') }}
+title: History Repair
+aspect_ratio: 100%</pre>
+        <div class="row" style="margin-top: 8px;">
+          <button type="button" id="copy-yaml">Copy YAML</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 18px;">
+    <button type="button" class="primary" id="finish" disabled>Start correcting</button>
+    <p class="muted" id="finish-hint" style="margin: 8px 0 0;">
+      Confirm your backup and test the connection first.
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='onboarding.js') }}"></script>
+{% endblock %}

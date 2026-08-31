@@ -1,0 +1,75 @@
+#include <tunables/global>
+
+profile history_repair flags=(attach_disconnected,mediate_deleted,complain) {
+  #include <abstractions/base>
+
+  # Capabilities required by the web application
+  capability dac_override,
+  capability setuid,
+  capability setgid,
+
+  # Signal handling — allow clean shutdown from Supervisor
+  signal (send,receive) set=(kill,term,int,hup,cont),
+
+  # Python interpreter and standard library
+  /usr/bin/python3*      rix,
+  /usr/lib/python3*/     r,
+  /usr/lib/python3*/**   mr,
+  /usr/local/lib/python3*/ r,
+  /usr/local/lib/python3*/** mr,
+
+  # System binaries used by Python/Alpine and by run.sh (bash, jq)
+  /usr/bin/*             rix,
+  /bin/**                rix,
+  /sbin/**               rix,
+
+  # Standard system files
+  /etc/passwd            r,
+  /etc/group             r,
+  /etc/hostname          r,
+  /etc/hosts             r,
+  /etc/resolv.conf       r,
+  /etc/ssl/**            r,
+  /etc/ca-certificates/** r,
+
+  # Proc — process information for gunicorn's worker management
+  /proc/meminfo          r,
+  /proc/*/status         r,
+  /proc/*/stat           r,
+  /proc/sys/kernel/ngroups_max r,
+  @{PROC}/sys/kernel/random/boot_id r,
+
+  # Tmp — Python needs this for temporary files
+  /tmp/**                rwk,
+
+  # Application code and its vendored frontend assets — read only
+  /app/**                r,
+  /app/*.py              r,
+
+  # The app manifest, copied into the image so the version-parity check
+  # can read it at runtime
+  /config.yaml           r,
+
+  # Startup script
+  /run.sh                r,
+
+  # This app's own config directory (the app_config map type's default
+  # container path). Write access is needed for exactly one file:
+  # history_repair_state.json, which records that onboarding has been
+  # completed. No recorder data is stored here — corrections live in the
+  # recorder database (MariaDB, PostgreSQL, or the mounted SQLite file),
+  # reached separately.
+  /config/**             rw,
+
+  # The Home Assistant configuration directory (the homeassistant_config map
+  # type's default container path). Read-write, matching the grant already
+  # declared in config.yaml — SQLite mode reads and writes
+  # home-assistant_v2.db (plus its -wal/-shm sidecars) directly here, since
+  # SQLite is a single file with no server to connect to instead. Not used at
+  # all in mariadb/postgres mode, but Supervisor's map: list is fixed at
+  # install time and cannot depend on which db_type is chosen.
+  /homeassistant/**      rw,
+
+  # Supervisor API socket and token, used for Ingress
+  /data/**               rw,
+}

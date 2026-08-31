@@ -1,0 +1,19 @@
+# Standalone ruff.toml rather than a [tool.ruff] section in pyproject.toml,
+# matching the sibling nibe-smo-mqtt-bridge repo: pyproject.toml there is
+# rewritten wholesale by mutation-test tooling, so tool config that must
+# survive lives in its own file.
+line-length = 100
+
+# Production modules are imported by bare name (pytest.ini sets
+# pythonpath = app), so isort needs to be told where first-party code lives —
+# without this it files hr_* alongside flask and pymysql.
+src = ["app", "tests"]
+
+[lint]
+extend-select = [
+    "B",    # flake8-bugbear: likely bugs (mutable defaults, unused loop vars, etc.)
+    "I",    # isort: import sorting/grouping
+    "SIM",  # flake8-simplify: unnecessary complexity
+    "C4",   # flake8-comprehensions: unnecessary comprehension patterns
+    "UP",   # pyupgrade: outdated syntax for the target Python version
+]
