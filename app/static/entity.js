@@ -240,10 +240,15 @@
     const seconds = Number(rangeSelect.value);
     const start = windowEnd - seconds;
     const now = Date.now() / 1000;
-    // A small slack rather than an exact equality check: "now" keeps moving
+    // A slack window rather than an exact equality check: "now" keeps moving
     // while the page sits open, so an exact match would drift stale within
     // seconds of loading and wrongly re-enable "later" on an unchanged view.
-    rangeNext.disabled = windowEnd >= now - 1;
+    // 30s, not 1s: windowEnd is captured once at click time, but this runs
+    // again after an async fetch resolves — a slow request (or a loaded CI
+    // runner) can easily put more than a second between the two, which
+    // flipped this comparison and left "later" wrongly enabled under load
+    // even though the view had not actually changed.
+    rangeNext.disabled = windowEnd >= now - 30;
     rangeWindow.textContent = `${HC.formatDate(start)} – ${HC.formatDate(windowEnd)}`;
   }
 
