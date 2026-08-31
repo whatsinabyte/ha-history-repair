@@ -1690,6 +1690,14 @@ class TestCascadeGateStartsDisabledUnderWebkit:
                 browser = playwright.webkit.launch()
                 webkit_page = browser.new_page()
                 webkit_page.goto(f"{base}/entity/sensor.energy_total", wait_until="networkidle")
+                # Chart.js's default entrance animation moves each point from
+                # y=0 up into place over ~1000ms — reading its pixel position
+                # before that settles gets an intermediate, still-animating
+                # coordinate rather than the final one, and the click below
+                # misses the real point. Not visible locally on a fast,
+                # otherwise-idle machine, but reliably reproduced on a slower,
+                # shared CI runner.
+                webkit_page.wait_for_timeout(1500)
                 point = webkit_page.evaluate(
                     """() => {
                         const chart = Chart.getChart(document.getElementById('chart'));
