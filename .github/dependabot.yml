@@ -1,0 +1,49 @@
+version: 2
+updates:
+  # app/requirements.txt — runtime dependencies shipped in the add-on image
+  - package-ecosystem: "pip"
+    directory: "/app"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      runtime-dependencies:
+        patterns:
+          - "*"
+
+  # requirements-dev.txt, requirements-test.txt — dev/test-only dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      dev-test-dependencies:
+        patterns:
+          - "*"
+
+  # Dockerfile's FROM base image
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+
+  # .github/workflows/tests.yml — GitHub Actions used in CI
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
