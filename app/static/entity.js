@@ -194,6 +194,18 @@
               color: textDim,
               maxRotation: 0,
               autoSkip: true,
+              // Chart.js's own default (3px) measures gaps too tightly for
+              // this axis's actual label text ("28 Aug 2026" etc., wider
+              // than the short "28 Aug" Chart.js sizes its default padding
+              // for) — measured directly against the real rendered chart:
+              // adjacent labels overlapped by up to 14px on an iPhone-width
+              // viewport, at every width from 320 to 430px, worst on wider
+              // phones (more ticks survive, each one closer together). 30
+              // gives a comfortable positive gap at every width tested,
+              // while a real desktop view stays just as dense as before —
+              // this only ever removes ticks that were already crowding
+              // into their neighbour.
+              autoSkipPadding: 30,
             },
             grid: { color: border },
           },

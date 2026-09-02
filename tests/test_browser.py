@@ -19,6 +19,7 @@ Skipped unless Playwright and its browser are installed:
 
 from __future__ import annotations
 
+import itertools
 import re
 import threading
 import time
@@ -647,6 +648,48 @@ class TestHiddenAttributeActuallyHides:
 
 
 class TestGraphPage:
+    def test_the_30_day_axis_labels_do_not_overlap_on_a_phone_screen(
+        self, page: Any, adapter: FakeAdapter
+    ) -> None:
+        # Reported: on an iPhone-width screen, the 30-day view's date labels
+        # ("28 Aug 2026") ran into each other. Confirmed by measuring actual
+        # rendered label bounding boxes (canvas text has no DOM box to read
+        # directly) at several phone widths — Chart.js's own autoSkip left
+        # adjacent labels overlapping by up to 14px, using its default 3px
+        # autoSkipPadding, too tight for this axis's actual label width.
+        # Checks the real rendered gap between every adjacent pair of ticks,
+        # not just that *a* fix was applied, so a future change that
+        # reintroduces crowding — e.g. a longer date format — fails this too.
+        entity_id = "sensor.month_of_data"
+        adapter.add_entity(entity_id, SensorType.MEASUREMENT)
+        now = time.time()
+        for i in range(32 * 24):
+            adapter.add_state(entity_id, 2000 + i, now - i * 3600, "20.0")
+        page.set_viewport_size({"width": 375, "height": 812})
+        _goto(page, f"/entity/{entity_id}")
+        page.select_option("#range", "2592000")
+        page.wait_for_load_state("networkidle")
+
+        boxes = page.evaluate(
+            """() => {
+                const chart = Chart.getChart(document.getElementById('chart'));
+                const scale = chart.scales.x;
+                const ticks = scale.ticks;
+                const ctx = chart.ctx;
+                const computed = getComputedStyle(chart.canvas);
+                ctx.font = `${computed.fontSize} ${computed.fontFamily}`;
+                return ticks.map((t, i) => {
+                    const x = scale.getPixelForTick(i);
+                    const w = ctx.measureText(t.label).width;
+                    return { label: t.label, left: x - w / 2, right: x + w / 2 };
+                });
+            }"""
+        )
+        assert len(boxes) >= 2, "expected more than one tick on a 30-day view"
+        for prev, cur in itertools.pairwise(boxes):
+            gap = cur["left"] - prev["right"]
+            assert gap >= 0, f"{prev['label']!r} overlaps {cur['label']!r} by {-gap:.1f}px"
+
     def test_the_header_row_wraps_instead_of_overflowing_on_a_phone_screen(self, page: Any) -> None:
         # Regression: .spread (title block + sensor-type pill + "Back to
         # entities") had no flex-wrap, so a long entity_id squeezed against
