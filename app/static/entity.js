@@ -148,6 +148,14 @@
         maintainAspectRatio: false,
         parsing: false,
         normalized: true,
+        // Chart.js's default ~1000ms entrance animation re-runs on every
+        // range change and every ← / → page, not just the first load — pure
+        // visual delay on a graph a user may flip through several times in
+        // a row, and worse than cosmetic: hit-testing happens against
+        // wherever a point currently is mid-animation, so tapping a point
+        // right after the data changes could land on empty space or the
+        // wrong point on a slower device, before it settles.
+        animation: false,
         // Only for Chart.js's own y-axis tick number formatting (thousand
         // separators etc.) — the date/time axis below deliberately does NOT
         // depend on this. See the comment there for why.

@@ -648,6 +648,34 @@ class TestHiddenAttributeActuallyHides:
 
 
 class TestGraphPage:
+    def test_points_are_at_their_final_position_immediately_no_entrance_animation(
+        self, page: Any
+    ) -> None:
+        # Chart.js's default ~1000ms entrance animation re-runs on every
+        # range change and every prev/next page, not just the first load —
+        # and hit-testing happens against wherever a point currently is
+        # mid-animation, so a real click right after the data changes could
+        # land on the wrong point, or none, on a slower device before it
+        # settles. Verified directly: a point's rendered position is
+        # compared immediately after load against its own position a moment
+        # later — if animation were still running, those would differ.
+        _goto(page, f"/entity/{ENTITY}")
+        expect(page.locator("#point-count")).to_contain_text("points plotted")
+        immediately, later = page.evaluate(
+            """() => new Promise((resolve) => {
+                const chart = Chart.getChart(document.getElementById('chart'));
+                const meta = () => {
+                    const m = chart.getDatasetMeta(0).data[0];
+                    return { x: m.x, y: m.y };
+                };
+                const first = meta();
+                setTimeout(() => resolve([first, meta()]), 300);
+            })"""
+        )
+        assert immediately == later, (
+            f"point moved after render ({immediately} -> {later}) — animation is not off"
+        )
+
     def test_the_30_day_axis_labels_do_not_overlap_on_a_phone_screen(
         self, page: Any, adapter: FakeAdapter
     ) -> None:
