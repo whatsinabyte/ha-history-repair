@@ -57,7 +57,7 @@ jobs:
       # user's own device, so a build failure is a failure to install. Both
       # architectures in config.yaml are built: amd64 natively, and aarch64
       # under emulation for the ARM boards most Home Assistant installs run on.
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@v4
       - uses: docker/setup-buildx-action@v4
 
       - name: Build amd64
