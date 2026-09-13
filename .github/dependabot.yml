@@ -1,6 +1,12 @@
 version: 2
 updates:
-  # app/requirements.txt — runtime dependencies shipped in the add-on image
+  # app/requirements.txt — runtime dependencies shipped in the add-on image.
+  # websocket-client and psycopg are excluded here because requirements-dev.txt
+  # pins them too (psycopg with the [binary] extra) and pulls in app/
+  # requirements.txt via "-r", so the dev-test-dependencies group below already
+  # bumps both files together for those two packages. Without this exclusion,
+  # both groups propose the same app/requirements.txt change independently,
+  # producing two PRs that edit the same lines.
   - package-ecosystem: "pip"
     directory: "/app"
     schedule:
@@ -8,12 +14,17 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    ignore:
+      - dependency-name: "websocket-client"
+      - dependency-name: "psycopg"
     groups:
       runtime-dependencies:
         patterns:
           - "*"
 
-  # requirements-dev.txt, requirements-test.txt — dev/test-only dependencies
+  # requirements-dev.txt, requirements-test.txt — dev/test-only dependencies.
+  # Also covers websocket-client and psycopg for app/requirements.txt, which
+  # requirements-dev.txt reaches via "-r" — see the note above.
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
